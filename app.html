@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Oru Village – Oru Market</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body{font-family:Arial;margin:0;background:#f3f4f6}
+header{background:#15803d;color:#fff;padding:15px;text-align:center}
+.container{max-width:1100px;margin:auto;padding:20px}
+.card{background:#fff;padding:15px;border-radius:8px;margin-bottom:15px}
+input,select,button{width:100%;padding:8px;margin:6px 0}
+button{border:none;border-radius:5px;cursor:pointer}
+.green{background:#16a34a;color:#fff}
+.outline{border:1px solid #16a34a;background:#fff;color:#16a34a}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px}
+.images{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+img{width:100%;height:150px;object-fit:cover;border-radius:5px}
+.actions{display:flex;gap:6px}
+.price{color:#15803d;font-weight:bold}
+.hidden{display:none}
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>🌾 Oru Village – Oru Market</h2>
+</header>
+
+<div class="container">
+
+<!-- ROLE -->
+<div id="role" class="card">
+<button class="green" onclick="openTech()">Tech Person</button>
+<button class="outline" onclick="openBuyer()">Buyer</button>
+<button class="outline" onclick="openAdmin()">Admin</button>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="card hidden">
+<h3>🛡 Admin</h3>
+<input id="adminCrop" placeholder="Crop">
+<input id="adminPrice" placeholder="Market price">
+<button class="green" onclick="updatePrice()">Update Price</button>
+<button class="outline" onclick="back()">Back</button>
+</div>
+
+<!-- TECH PERSON -->
+<div id="tech" class="card hidden">
+<h3>👨‍💻 Tech Person</h3>
+
+<input id="techPhone" placeholder="Your WhatsApp Number">
+<input id="farmer" placeholder="Farmer Name">
+<input id="village" placeholder="Village">
+
+<select id="crop">
+<option value="">Select Crop</option>
+<option>Rice</option>
+<option>Tomato</option>
+<option>Onion</option>
+<option>Banana</option>
+<option>Karumbu</option>
+</select>
+
+<div id="marketPrice"></div>
+
+<input id="price" placeholder="Price">
+<input id="qty" placeholder="Total Quantity">
+
+<label>📷 Upload Images</label>
+<input type="file" id="images" multiple accept="image/*">
+
+<button class="green" onclick="saveCrop()">Save Crop</button>
+<button class="outline" onclick="back()">Back</button>
+</div>
+
+<!-- BUYER -->
+<div id="buyer" class="card hidden">
+<h3>🛒 Buyer</h3>
+<input id="buyerQty" placeholder="Quantity needed">
+<div id="list" class="grid"></div>
+<button class="outline" onclick="back()">Back</button>
+</div>
+
+</div>
+
+<script>
+const API="http://localhost:3001";
+
+/* NAV */
+function openTech(){role.classList.add("hidden");tech.classList.remove("hidden")}
+function openBuyer(){role.classList.add("hidden");buyer.classList.remove("hidden");load()}
+function openAdmin(){role.classList.add("hidden");admin.classList.remove("hidden")}
+function back(){tech.classList.add("hidden");buyer.classList.add("hidden");admin.classList.add("hidden");role.classList.remove("hidden")}
+
+/* ADMIN */
+function updatePrice(){
+  fetch(API+"/admin/price",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({crop:adminCrop.value,price:adminPrice.value})
+  }).then(()=>alert("Market price updated"));
+}
+
+document.getElementById("crop").addEventListener("change", function () {
+  const selectedCrop = this.value;
+  if (!selectedCrop) {
+    marketPrice.innerText = "";
+    return;
+  }
+
+  fetch(API + "/price/" + selectedCrop)
+    .then(res => res.json())
+    .then(data => {
+      marketPrice.innerText = "Market price: " + data.price;
+    })
+    .catch(() => {
+      marketPrice.innerText = "Market price: Not available";
+    });
+});
+
+
+/* TECH PERSON */
+function saveCrop(){
+  const files=[...images.files];
+  let imgs=[];
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>imgs.push(r.result);
+    r.readAsDataURL(f);
+  });
+
+  setTimeout(()=>{
+    fetch(API+"/crop",{
+      method:"POST",
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        techPhone:techPhone.value,
+        farmer:farmer.value,
+        village:village.value,
+        crop:crop.value,
+        price:price.value,
+        qty:qty.value,
+        images:imgs
+      })
+    }).then(()=>alert("Crop saved"));
+  },400);
+}
+
+/* BUYER */
+function load(){
+  fetch(API+"/crops")
+    .then(r=>r.json())
+    .then(show);
+}
+
+function show(data){
+  list.innerHTML="";
+  if(data.length===0){
+    list.innerHTML="<p>No crops available</p>";
+    return;
+  }
+  data.forEach((d,i)=>{
+    const div=document.createElement("div");
+    div.className="card";
+    div.innerHTML=`
+      <div class="images">
+        ${d.images.map(img=>`<img src="${img}">`).join("")}
+      </div>
+      <h4>${d.crop}</h4>
+      <p>${d.farmer} – ${d.village}</p>
+      <p class="price">₹${d.price}</p>
+      <p>Total: ${d.qty}</p>
+      <div class="actions">
+        <button class="green" onclick="order('${d.techPhone}','${d.crop}')">
+          WhatsApp Order
+        </button>
+        <button class="outline" onclick="del(${i},'${d.techPhone}')">
+          Delete
+        </button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+/* ORDER */
+function order(phone,crop){
+  const msg=`Order Request
+Crop: ${crop}
+Quantity: ${buyerQty.value}`;
+  window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`);
+}
+
+/* DELETE (TECH PERSON ONLY) */
+function del(id,phone){
+  const tp=prompt("Enter your Tech Phone to delete:");
+  if(tp!==phone){ alert("Not allowed"); return; }
+  fetch(API+"/crop/"+id,{
+    method:"DELETE",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({techPhone:tp})
+  }).then(()=>load());
+}
+</script>
+
+</body>
+</html>
