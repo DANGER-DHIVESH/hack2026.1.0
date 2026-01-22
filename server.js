@@ -8,30 +8,28 @@ app.use(express.json());
 let crops = [];
 let marketPrices = {};
 
-// ---------- ADMIN ----------
+// HOME ROUTE
+app.get("/", (req, res) => {
+  res.send("🌾 Backend is running");
+});
+
+// ADMIN
 app.post("/admin/price", (req, res) => {
   const { crop, price } = req.body;
   marketPrices[crop] = price;
   res.json({ success: true });
 });
 
-// HOME ROUTE
-app.get("/", (req, res) => {
-  res.send("🌾 Oru Village – Oru Market Backend is Running");
+app.get("/price/:crop", (req, res) => {
+  res.json({ price: marketPrices[req.params.crop] || "Not updated" });
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log("Backend running on port " + PORT);
-});
-
-// ---------- TECH PERSON ----------
+// TECH PERSON
 app.post("/crop", (req, res) => {
   crops.push(req.body);
   res.json({ success: true });
 });
 
-// Tech person ONLY delete
 app.delete("/crop/:id", (req, res) => {
   const { techPhone } = req.body;
   if (!crops[req.params.id]) {
@@ -44,15 +42,13 @@ app.delete("/crop/:id", (req, res) => {
   res.json({ success: true });
 });
 
-// ---------- BUYER ----------
+// BUYER
 app.get("/crops", (req, res) => {
   res.json(crops);
 });
 
-// ---------- START ----------
+// PORT (VERY IMPORTANT)
 const PORT = process.env.PORT || 3001;
-
 app.listen(PORT, () => {
   console.log("Backend running on port " + PORT);
 });
-
