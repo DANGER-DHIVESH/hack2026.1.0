@@ -15,8 +15,14 @@ app.post("/admin/price", (req, res) => {
   res.json({ success: true });
 });
 
-app.get("/price/:crop", (req, res) => {
-  res.json({ price: marketPrices[req.params.crop] || "Not updated" });
+// HOME ROUTE
+app.get("/", (req, res) => {
+  res.send("🌾 Oru Village – Oru Market Backend is Running");
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log("Backend running on port " + PORT);
 });
 
 // ---------- TECH PERSON ----------
