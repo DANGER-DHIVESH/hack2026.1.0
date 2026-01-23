@@ -52,3 +52,8 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log("Backend running on port " + PORT);
 });
+fetch("https://farmer-service-9e5o.onrender.com/add-crop", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(cropData)
+});
