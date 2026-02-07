@@ -6,205 +6,129 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-*{box-sizing:border-box;font-family:system-ui,Arial}
-body{margin:0;background:#f3f4f6}
-header{background:#15803d;color:#fff;padding:14px;text-align:center;font-size:18px}
-.container{max-width:1100px;margin:auto;padding:14px}
-.card{background:#fff;padding:14px;border-radius:12px;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
-h3{margin:6px 0 10px}
-button{padding:12px;width:100%;border:none;border-radius:10px;margin:6px 0;cursor:pointer;font-size:15px}
+:root{--g:#15803d}
+*{box-sizing:border-box;font-family:system-ui}
+body{margin:0;background:#f4f6f8}
+header{background:var(--g);color:#fff;padding:16px;text-align:center;font-size:22px}
+.container{max-width:1100px;margin:auto;padding:20px}
+.card{background:#fff;padding:16px;border-radius:12px;margin-bottom:16px;
+box-shadow:0 10px 25px rgba(0,0,0,.08)}
+input,select,button{width:100%;padding:10px;margin:6px 0;border-radius:8px}
+button{border:none;cursor:pointer}
 .green{background:#16a34a;color:#fff}
-.outline{border:1px solid #16a34a;background:#fff;color:#16a34a}
-input,select{padding:10px;width:100%;margin:6px 0;border-radius:10px;border:1px solid #ddd}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.outline{border:1px solid var(--g);background:#fff;color:var(--g)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+img{width:100%;height:160px;object-fit:cover;border-radius:8px}
 .hidden{display:none}
-.price{color:#15803d;font-weight:700}
-.badge{background:#dcfce7;color:#166534;padding:4px 8px;border-radius:999px;font-size:12px;margin-left:6px}
+.price{font-weight:700;color:var(--g)}
 .actions{display:flex;gap:8px}
-.actions a{flex:1}
-img{width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-top:6px}
-@media (max-width:600px){
-  header{font-size:16px}
-  button{font-size:16px}
-}
+@media(max-width:600px){header{font-size:18px}}
 </style>
 </head>
 
 <body>
-
 <header>🌾 Oru Village – Oru Market</header>
 
 <div class="container">
 
-<!-- ROLE -->
-<div id="role" class="card">
-  <button id="adminBtn" class="green hidden" onclick="showAdmin()">🛡️ Admin</button>
-  <button class="green" onclick="showTech()">👨‍💻 Tech Person</button>
-  <button class="outline" onclick="showBuyer()">🛒 Buyer</button>
+<div class="card">
+  <button onclick="adminLogin()">🛡️ Admin</button>
+  <button onclick="showTech()">👨‍💻 Tech Person</button>
+  <button onclick="showBuyer()">🛒 Buyer</button>
 </div>
 
 <!-- ADMIN -->
 <div id="admin" class="card hidden">
-  <h3>🛡️ Admin Panel</h3>
-  <input id="adminCrop" placeholder="Crop name (e.g. Rice)">
-  <input id="adminPrice" placeholder="Market price">
-  <button class="green" onclick="updatePrice()">Update Market Price</button>
-  <button class="outline" onclick="back()">Back</button>
+  <h3>Admin Panel</h3>
+  <input id="apass" placeholder="Admin password">
+  <input id="acrop" placeholder="Crop">
+  <input id="aprice" placeholder="Market price">
+  <button class="green" onclick="updatePrice()">Update</button>
 </div>
 
 <!-- TECH -->
 <div id="tech" class="card hidden">
-  <h3>👨‍💻 Tech Person</h3>
-  <input id="techPhone" placeholder="Tech Phone">
-  <input id="farmer" placeholder="Farmer Name">
+  <h3>Tech Person</h3>
+  <input id="tphone" placeholder="Tech phone">
+  <input id="farmer" placeholder="Farmer name">
   <input id="village" placeholder="Village">
-  <select id="crop">
-    <option>Rice</option>
-    <option>Karumbu</option>
-    <option>Maize</option>
-    <option>Vegetables</option>
+  <select id="crop" onchange="loadMarket()">
+    <option>Rice</option><option>Karumbu</option><option>Maize</option>
   </select>
   <input id="price" placeholder="Price (auto from market)">
   <input id="qty" placeholder="Quantity">
-  <input type="file" id="images" multiple accept="image/*">
+  <input type="file" id="imgs" multiple>
   <button class="green" onclick="saveCrop()">Save Crop</button>
-  <button class="outline" onclick="back()">Back</button>
 </div>
 
 <!-- BUYER -->
 <div id="buyer" class="hidden">
-  <h3>🛒 Available Crops</h3>
-  <div id="cropList" class="grid"></div>
-  <button class="outline" onclick="back()">Back</button>
+  <h3>Available Crops</h3>
+  <div id="list" class="grid"></div>
 </div>
 
 </div>
 
 <script>
-/* ================= CONFIG ================= */
-const API_URL = "https://farmer-service-9e5o.onrender.com"; // CHANGE if needed
-const ADMIN_PIN = "8610694904"; // admin laptop only
+const API="https://farmer-service-9e5o.onrender.com";
 
-/* ================= ADMIN LOCK ================= */
-window.onload = () => {
-  if (localStorage.getItem("isAdmin")==="true") {
-    adminBtn.classList.remove("hidden");
-  } else {
-    const pin = prompt("Enter Admin PIN (Admin laptop only)");
-    if (pin === ADMIN_PIN) {
-      localStorage.setItem("isAdmin","true");
-      adminBtn.classList.remove("hidden");
-      alert("Admin enabled on this device");
-    }
-  }
-};
+// ---------- NAV ----------
+function hideAll(){admin.classList.add("hidden");tech.classList.add("hidden");buyer.classList.add("hidden")}
+function showTech(){hideAll();tech.classList.remove("hidden")}
+function showBuyer(){hideAll();buyer.classList.remove("hidden");loadCrops()}
 
-/* ================= NAV ================= */
-function showAdmin(){ role.classList.add("hidden"); admin.classList.remove("hidden"); }
-function showTech(){ role.classList.add("hidden"); tech.classList.remove("hidden"); }
-function showBuyer(){ role.classList.add("hidden"); buyer.classList.remove("hidden"); loadCrops(); }
-function back(){
-  admin.classList.add("hidden");
-  tech.classList.add("hidden");
-  buyer.classList.add("hidden");
-  role.classList.remove("hidden");
+// ---------- ADMIN ----------
+function adminLogin(){
+  const p=prompt("admin password");
+  fetch(API+"/admin/login",{method:"POST",headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({pass:p})})
+  .then(r=>r.ok?admin.classList.remove("hidden"):alert("Wrong password"))
 }
-
-/* ================= ADMIN ================= */
 function updatePrice(){
-  fetch(API_URL+"/admin/price",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ crop:adminCrop.value, price:adminPrice.value })
-  }).then(()=>alert("Market price updated"));
+  fetch(API+"/admin/price",{method:"POST",headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({crop:acrop.value,price:aprice.value})})
+  .then(()=>alert("Price updated"))
 }
 
-/* ================= TECH ================= */
-crop.addEventListener("change", async ()=>{
-  const r = await fetch(API_URL+"/price/"+crop.value);
-  const d = await r.json();
-  if (d.price !== "Not updated") price.value = d.price;
-});
-
+// ---------- TECH ----------
+function loadMarket(){
+  fetch(API+"/price/"+crop.value)
+  .then(r=>r.json()).then(d=>price.value=d.price)
+}
 async function saveCrop(){
-  localStorage.setItem("myTechPhone", techPhone.value);
-
-  let imgs=[];
-  for(let f of images.files){
-    imgs.push(await toBase64(f));
-  }
-
-  fetch(API_URL+"/crop",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({
-      techPhone:techPhone.value,
-      farmer:farmer.value,
-      village:village.value,
-      crop:crop.value,
-      price:price.value,
-      qty:qty.value,
-      images:imgs
-    })
-  }).then(()=>alert("Crop saved"));
+  let images=[]
+  for(let f of imgs.files) images.push(await to64(f))
+  fetch(API+"/crop",{method:"POST",headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({
+    techPhone:tphone.value,farmer:farmer.value,village:village.value,
+    crop:crop.value,price:price.value,qty:qty.value,images
+  })}).then(()=>alert("Saved"))
 }
+function to64(f){return new Promise(r=>{let fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)})}
 
-function toBase64(file){
-  return new Promise((res,rej)=>{
-    const r=new FileReader();
-    r.onload=()=>res(r.result);
-    r.onerror=rej;
-    r.readAsDataURL(file);
-  });
-}
-
-/* ================= BUYER ================= */
-async function loadCrops(){
-  const myPhone = localStorage.getItem("myTechPhone");
-  const data = await fetch(API_URL+"/crops").then(r=>r.json());
-  cropList.innerHTML="";
-
-  for(let i=0;i<data.length;i++){
-    const c=data[i];
-    const mp=await fetch(API_URL+"/price/"+c.crop).then(r=>r.json());
-    let imgs="";
-    if(c.images) c.images.forEach(im=> imgs+=`<img src="${im}">`);
-
-    const msg = encodeURIComponent(
-      `Hello ${c.farmer},\nInterested in ${c.crop}\nQty: ${c.qty}\nPrice: ₹${c.price}\nVillage: ${c.village}`
-    );
-
-    const canDelete = myPhone && myPhone===c.techPhone;
-
-    cropList.innerHTML+=`
+// ---------- BUYER ----------
+function loadCrops(){
+  fetch(API+"/crops").then(r=>r.json()).then(data=>{
+    list.innerHTML=""
+    data.forEach((c,i)=>{
+      let imgs=c.images?.map(im=>`<img src="${im}">`).join("")||""
+      let msg=encodeURIComponent(`Need ${c.crop} Qty:${c.qty}`)
+      list.innerHTML+=`
       <div class="card">
-        <b>${c.farmer}</b> (${c.village})<br>
+        <b>${c.farmer}</b> – ${c.village}<br>
         🌾 ${c.crop}<br>
-        <span class="price">₹${c.price}</span>
-        <span class="badge">Market: ₹${mp.price}</span><br>
-        Qty: ${c.qty}<br>
+        <span class="price">₹${c.price}</span><br>
+        Qty: ${c.qty}
         ${imgs}
         <div class="actions">
-          <a href="tel:${c.techPhone}">
-            <button class="green">📞 Call</button>
-          </a>
+          <a href="tel:${c.techPhone}"><button class="green">Call</button></a>
           <a href="https://wa.me/91${c.techPhone}?text=${msg}" target="_blank">
-            <button class="outline">💬 WhatsApp</button>
-          </a>
+            <button class="outline">WhatsApp</button></a>
         </div>
-        ${canDelete ? `<button onclick="deleteCrop(${i})">❌ Delete</button>` : ``}
-      </div>`;
-  }
-}
-
-function deleteCrop(id){
-  fetch(API_URL+"/crop/"+id,{
-    method:"DELETE",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ techPhone: localStorage.getItem("myTechPhone") })
-  }).then(()=>loadCrops());
+      </div>`
+    })
+  })
 }
 </script>
-
 </body>
 </html>
